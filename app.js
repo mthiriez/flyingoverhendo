@@ -470,6 +470,8 @@ async function winUpdate(w, wx, wy) {
 }
 
 let detailTick = 0;
+let isHovering = false;
+let hoverCam = 0;
 const winMid = makeWindow(13, 7, 56, 0.60, 2.2, 1);
 const winNear = makeWindow(16, 5, 64, 0.54, 4.0, 2);
 const winUltra = makeWindow(16, 3, 72, 0.55, 4.2, 3, 1024);
@@ -624,7 +626,9 @@ function audioUpdate() {
 /* ---------- input ---------- */
 let pointerId = null, originX = 0, originY = 0;
 
+const activePointers = new Map();
 canvas.addEventListener('pointerdown', (e) => {
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (state !== 'flying') return;
   e.preventDefault();
   initAudio();
@@ -635,6 +639,18 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointermove', (e) => {
   if (pointerId !== e.pointerId || state !== 'flying') return;
   e.preventDefault();
+  const track = activePointers.get(e.pointerId);
+  if (track) {
+    const dy2 = e.clientY - track.y;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (activePointers.size >= 2 && isHovering) {
+      // two fingers in a hover: climb or descend
+      flight.pos.y = Math.max(terrainHeightAt(flight.pos.x, flight.pos.z) + MIN_CLEAR,
+                              Math.min(MAX_ALT, flight.pos.y - dy2 * 0.7));
+      stickX = 0; stickY = 0;
+      return;
+    }
+  }
   const dx = (e.clientX - originX) / 90;
   const dy = (e.clientY - originY) / 90;
   stickX = Math.max(-1, Math.min(1, dx));
@@ -642,6 +658,7 @@ canvas.addEventListener('pointermove', (e) => {
 }, { passive: false });
 
 function endPointer(e) {
+  if (e && e.pointerId !== undefined) activePointers.delete(e.pointerId);
   if (pointerId !== null && e && e.pointerId !== undefined && e.pointerId !== pointerId) return;
   pointerId = null; stickX = 0; stickY = 0;
 }
@@ -748,10 +765,12 @@ function updateFlight(dt) {
   flight.pitch += (pitchTarget - flight.pitch) * Math.min(1, dt * 3.0);
   flight.roll += ((-ix * (hovering ? 0.14 : 0.55)) - flight.roll) * Math.min(1, dt * 4.0);
 
+  isHovering = hovering;
   if (hovering) {
     flight.pitch += (0 - flight.pitch) * Math.min(1, dt * 3.0);
-    flight.pos.y += iy * 14 * dt;
+    hoverCam = Math.max(0, Math.min(1, hoverCam + iy * dt * 0.85));
   } else {
+    hoverCam += (0 - hoverCam) * Math.min(1, dt * 3.0);
     const climb = Math.sin(flight.pitch) * flight.speed;
     const sink = Math.max(0, 38 - flight.speed) * 0.6;
     flight.pos.y += (climb - sink) * dt;
@@ -784,12 +803,13 @@ const camLook = new THREE.Vector3();
 function updateCamera(dt) {
   const h = flight.heading;
   camFwd.set(Math.sin(h), 0, -Math.cos(h));
-  camDesired.copy(flight.pos).addScaledVector(camFwd, -24);
-  camDesired.y += 7.2;
+  const down = hoverCam;
+  camDesired.copy(flight.pos).addScaledVector(camFwd, -(30 * (1 - down * 0.86)));
+  camDesired.y += 7.2 + down * 46;
   const k = state === 'flying' ? (1 - Math.exp(-dt * 4.5)) : 1;
   camera.position.lerp(camDesired, k);
-  camLook.copy(flight.pos).addScaledVector(camFwd, 46);
-  camLook.y += 2;
+  camLook.copy(flight.pos).addScaledVector(camFwd, 46 * (1 - down));
+  camLook.y += 2 - down * 14;
   camera.lookAt(camLook);
   sky.position.copy(camera.position);
 }
