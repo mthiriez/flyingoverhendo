@@ -438,7 +438,7 @@ async function winUpdate(w, wx, wy) {
   // carry the previous window over, shifted by the tile delta, so nothing flashes dark
   w.bctx.clearRect(0, 0, w.buf.width, w.buf.height);
   if (w.prevCol !== null) {
-    w.bctx.drawImage(w.cv, (w.prevCol - colC) * cellPx, (w.prevRow - rowC) * cellPx);
+    w.bctx.drawImage(w.cv, (w.prevCol - colC) * w.cell, (w.prevRow - rowC) * w.cell);
   }
   w.prevCol = colC; w.prevRow = rowC;
   w.colC = colC; w.rowC = rowC;
@@ -448,7 +448,7 @@ async function winUpdate(w, wx, wy) {
     for (let i = 0; i < w.n; i++) {
       const ix = i, iy = j;
       jobs.push(winTile(w, colC - half + i, rowC - half + j).then(img => {
-        if (img) w.bctx.drawImage(img, ix * cellPx, iy * cellPx, cellPx, cellPx);
+        if (img) w.bctx.drawImage(img, ix * w.cell, iy * w.cell, w.cell, w.cell);
       }));
     }
   }
