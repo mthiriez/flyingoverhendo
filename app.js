@@ -46,7 +46,7 @@ const farN = Math.pow(2, FAR_Z);
 const farSpan = WORLD / farN;
 const txC = Math.floor((CENTER.lon + 180) / 360 * farN);
 const tyC = Math.floor((1 - Math.log(Math.tan(CENTER.lat * Math.PI / 180) + 1 / Math.cos(CENTER.lat * Math.PI / 180)) / Math.PI) / 2 * farN);
-const tx0 = txC - FAR_TILES / 2, ty0 = tyC - FAR_TILES / 2;
+const tx0 = txC - Math.floor(FAR_TILES / 2), ty0 = tyC - Math.floor(FAR_TILES / 2);
 const B = {
   x0: tx0 * farSpan - WORLD / 2,
   x1: (tx0 + FAR_TILES) * farSpan - WORLD / 2,
