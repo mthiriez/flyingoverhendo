@@ -50,6 +50,7 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
 .poi.k-peak{color:#9be7a0;border-color:rgba(155,231,160,.4)}
 .poi.k-town,.poi.k-city{color:#cfe8ff;border-color:rgba(191,228,255,.45)}
 .poi.k-lake{color:#8fc6ff;border-color:rgba(143,198,255,.4)}
+.poi.k-road{color:#ffe0a3;border-color:rgba(255,224,163,.5)}
 .poi.k-falls,.poi.k-site{color:#ffd39b;border-color:rgba(255,211,155,.45)}
 
 #jump{position:fixed;right:calc(env(safe-area-inset-right) + 14px);bottom:calc(env(safe-area-inset-bottom) + 16px);
@@ -59,12 +60,9 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
  padding:4px;-webkit-overflow-scrolling:touch}
 #jumpList button{padding:11px 14px;border-radius:12px;border:1px solid rgba(120,190,255,.22);
  background:rgba(12,22,38,.85);color:#eaf2ff;font-size:12px;text-align:left;font-weight:600}
-#compass{position:fixed;left:calc(env(safe-area-inset-left) + 12px);top:calc(env(safe-area-inset-top) + 8px);
- width:46px;height:46px;border-radius:50%;background:rgba(8,14,26,.42);border:1px solid rgba(120,190,255,.18);
- backdrop-filter:blur(6px);z-index:3;pointer-events:none}
-#compassRose{position:absolute;inset:0;will-change:transform}
-#compassRose b{position:absolute;font-size:10px;font-weight:800;line-height:1;color:#ffcf7a}
-#compassRose b.cn{top:5px;left:50%;margin-left:-4px}
+#hdg{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:50%;transform:translateX(-50%);
+ width:220px;height:30px;border-radius:10px;background:rgba(8,14,26,.42);
+ border:1px solid rgba(120,190,255,.18);backdrop-filter:blur(6px);z-index:3;pointer-events:none}
 #thrCap{position:absolute;top:9px;left:0;right:0;text-align:center;font-size:8px;letter-spacing:1.6px;color:#7fb4e6}
 #thrTrack{position:absolute;left:50%;top:28px;bottom:46px;width:6px;margin-left:-3px;border-radius:4px;background:rgba(255,255,255,.14)}
 #thrFill{position:absolute;left:0;right:0;bottom:0;border-radius:4px;background:linear-gradient(0deg,#5aa9ff,#ffd39b);height:43%}
@@ -85,9 +83,7 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
   <div id="jumpList"></div>
   <button id="jumpClose">CLOSE</button>
 </div>
-<div id="compass">
-  <div id="compassRose"><b class="cn">N</b></div>
-</div>
+<canvas id="hdg" width="220" height="30"></canvas>
 <div id="place" class="hidden"><b id="placeCity">—</b><span id="placeStreet"></span></div>
 <div id="throttle">
   <div id="thrCap">SPEED</div>
@@ -109,6 +105,6 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
 </div>
 <div id="rotate">Turn your iPhone to landscape</div>
 <div id="error" class="overlay hidden"><p id="errorMsg"></p></div>
-<script type="module" src="./app.js?v=hud13"></script>
+<script type="module" src="./app.js?v=hud14"></script>
 </body>
 </html>
