@@ -6,6 +6,7 @@ import * as THREE from './vendor/three.module.min.js';
 
 const UI = {
   alt: document.getElementById('alt'),
+  agl: document.getElementById('agl'),
   spd: document.getElementById('spd'),
   hdg: document.getElementById('hdg'),
   card: document.getElementById('card'),
@@ -463,6 +464,132 @@ let detailTick = 0;
 const winMid = makeWindow(13, 7, 56, 0.60, 2.2, 1);
 const winNear = makeWindow(16, 5, 64, 0.54, 4.0, 2);
 
+/* ---------- landmarks: labels, mini-map, quick jump ---------- */
+const poiList = [];
+let poiLoaded = false, labTick = 0, trailTick = 0;
+const labelsHost = document.getElementById('labels');
+const labelEls = [];
+for (let i = 0; i < 10; i++) {
+  const el = document.createElement('div');
+  el.className = 'poi';
+  el.style.display = 'none';
+  labelsHost.appendChild(el);
+  labelEls.push(el);
+}
+const trail = [];
+
+fetch('./pois.json').then(r => (r.ok ? r.json() : [])).then(list => {
+  for (const p of list) {
+    const wx = mercXOf(p.lo) - CX;
+    const wz = -(mercYOf(p.la) - CY);
+    if (Math.hypot(wx, wz) > AREA_RADIUS + 4000) continue;
+    poiList.push({ name: p.n, kind: p.k, ele: p.e, la: p.la, lo: p.lo, wx: wx, wz: wz, gy: null });
+  }
+  poiLoaded = true;
+}).catch(() => {});
+
+const projV = new THREE.Vector3();
+function updateLabels() {
+  if (!poiLoaded) return;
+  const cand = [];
+  for (let i = 0; i < poiList.length; i++) {
+    const p = poiList[i];
+    const dx = p.wx - flight.pos.x, dz = p.wz - flight.pos.z;
+    const d = Math.sqrt(dx * dx + dz * dz);
+    if (d < 600 || d > 42000) continue;
+    if (p.gy === null) p.gy = sampleElevation(p.la, p.lo);
+    projV.set(p.wx, p.gy + 70, p.wz).project(camera);
+    if (projV.z < -1 || projV.z > 1) continue;
+    const sx = (projV.x * 0.5 + 0.5) * window.innerWidth;
+    const sy = (0.5 - projV.y * 0.5) * window.innerHeight;
+    if (sx < 6 || sx > window.innerWidth - 6 || sy < 64 || sy > window.innerHeight - 6) continue;
+    cand.push({ p: p, d: d, sx: sx, sy: sy });
+  }
+  cand.sort((a, b) => a.d - b.d);
+  for (let i = 0; i < labelEls.length; i++) {
+    const el = labelEls[i], c = cand[i];
+    if (!c) { el.style.display = 'none'; continue; }
+    el.style.display = 'block';
+    el.style.left = c.sx.toFixed(0) + 'px';
+    el.style.top = c.sy.toFixed(0) + 'px';
+    el.textContent = c.p.name + ' · ' + (c.d >= 1000 ? (c.d / 1000).toFixed(c.d < 10000 ? 1 : 0) + ' km' : Math.round(c.d) + ' m');
+    el.className = 'poi k-' + c.p.kind;
+  }
+}
+
+const mapCv = document.getElementById('map');
+const mapCtx = mapCv.getContext('2d');
+function drawMap() {
+  const S = 96, R = 44, c = S / 2;
+  const g = mapCtx;
+  g.clearRect(0, 0, S, S);
+  g.beginPath(); g.arc(c, c, R, 0, Math.PI * 2);
+  g.fillStyle = 'rgba(8,14,26,.62)'; g.fill();
+  g.strokeStyle = 'rgba(120,190,255,.35)'; g.lineWidth = 1; g.stroke();
+  const k = R / AREA_RADIUS;
+  for (let i = 0; i < poiList.length; i++) {
+    const po = poiList[i];
+    const x = c + (po.wx - flight.pos.x) * k, y = c + (po.wz - flight.pos.z) * k;
+    if (x < 3 || x > S - 3 || y < 3 || y > S - 3) continue;
+    g.fillStyle = po.kind === 'peak' ? 'rgba(155,231,160,.85)'
+      : (po.kind === 'town' || po.kind === 'city') ? 'rgba(210,235,255,.9)' : 'rgba(143,192,234,.55)';
+    g.fillRect(x - 0.7, y - 0.7, 1.4, 1.4);
+  }
+  if (trail.length > 1) {
+    g.strokeStyle = 'rgba(255,211,155,.7)'; g.lineWidth = 1;
+    g.beginPath();
+    for (let i = 0; i < trail.length; i++) {
+      const t = trail[i];
+      const x = c + (t.x - flight.pos.x) * k, y = c + (t.z - flight.pos.z) * k;
+      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  g.save();
+  g.translate(c, c);
+  g.rotate(flight.heading);
+  g.beginPath(); g.moveTo(0, -5.5); g.lineTo(3.6, 4.5); g.lineTo(0, 2.4); g.lineTo(-3.6, 4.5); g.closePath();
+  g.fillStyle = '#ffd39b'; g.fill();
+  g.restore();
+  g.fillStyle = '#ffcf7a'; g.font = 'bold 8px Arial'; g.textAlign = 'center';
+  g.fillText('N', c, 11);
+}
+
+function buildJumpList() {
+  const host = document.getElementById('jumpList');
+  host.innerHTML = '';
+  const arr = poiList.map(p => ({ p: p, d: Math.hypot(p.wx - flight.pos.x, p.wz - flight.pos.z) }))
+    .sort((a, b) => a.d - b.d).slice(0, 45);
+  for (const it of arr) {
+    const b = document.createElement('button');
+    const km = it.d >= 1000 ? (it.d / 1000).toFixed(it.d < 10000 ? 1 : 0) + ' km' : Math.round(it.d) + ' m';
+    b.textContent = it.p.name + (it.p.ele ? ' · ' + it.p.ele + ' m' : '') + ' · ' + km;
+    b.addEventListener('click', () => jumpTo(it.p));
+    host.appendChild(b);
+  }
+}
+
+function jumpTo(p) {
+  if (state !== 'flying' && state !== 'paused') return;
+  const gh = sampleElevation(p.la, p.lo);
+  flight.pos.x = p.wx;
+  flight.pos.z = p.wz;
+  flight.pos.y = gh + 320;
+  flight.heading = Math.atan2(-p.wx, p.wz);
+  flight.pitch = 0; flight.roll = 0;
+  trail.length = 0;
+  document.getElementById('jumpPanel').classList.add('hidden');
+}
+
+document.getElementById('jump').addEventListener('click', () => {
+  if (state !== 'flying' && state !== 'paused') return;
+  buildJumpList();
+  document.getElementById('jumpPanel').classList.remove('hidden');
+});
+document.getElementById('jumpClose').addEventListener('click', () => {
+  document.getElementById('jumpPanel').classList.add('hidden');
+});
+
 /* ---------- flight state ---------- */
 const flight = {
   pos: new THREE.Vector3(0, 420, 3200),
@@ -692,6 +819,7 @@ function updateHud(dt) {
   hudTick = 0;
   UI.alt.textContent = Math.round(flight.pos.y);
   UI.spd.textContent = Math.round(flight.speed * 3.6);
+  UI.agl.textContent = Math.max(0, Math.round(flight.pos.y - terrainHeightAt(flight.pos.x, flight.pos.z)));
   let deg = flight.heading * 180 / Math.PI;
   deg = (deg % 360 + 360) % 360;
   UI.hdg.textContent = Math.round(deg) % 360;
@@ -720,6 +848,18 @@ function frame(ts) {
       detailTick = 0;
       winUpdate(winMid, CX + flight.pos.x, CY - flight.pos.z);
       winUpdate(winNear, CX + flight.pos.x, CY - flight.pos.z);
+    }
+    labTick += dt;
+    if (labTick > 0.12) {
+      labTick = 0;
+      updateLabels();
+    }
+    trailTick += dt;
+    if (trailTick > 0.6) {
+      trailTick = 0;
+      trail.push({ x: flight.pos.x, z: flight.pos.z });
+      if (trail.length > 240) trail.shift();
+      drawMap();
     }
   }
   updateCamera(dt);
