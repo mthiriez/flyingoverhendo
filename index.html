@@ -13,15 +13,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0b1220;color:#eaf2f
  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
  -webkit-user-select:none;user-select:none;touch-action:none;overscroll-behavior:none}
 #view{position:fixed;inset:0;width:100%;height:100%;display:block;background:#0b1220;touch-action:none}
-#hud{position:fixed;top:0;left:0;right:0;display:flex;gap:10px;justify-content:center;
- padding:calc(env(safe-area-inset-top) + 8px) calc(env(safe-area-inset-right) + 14px) 0 calc(env(safe-area-inset-left) + 14px);
- pointer-events:none;font-variant-numeric:tabular-nums}
-.cell{background:rgba(8,14,26,.55);border:1px solid rgba(120,190,255,.22);border-radius:9px;
- padding:4px 10px;display:flex;align-items:baseline;gap:5px;backdrop-filter:blur(6px)}
-.cell span{font-size:8px;letter-spacing:1.6px;color:#7fb4e6}
-.cell b{font-size:16px;font-weight:800;color:#eaf2ff;min-width:34px;text-align:right}
-.cell i{font-size:8px;font-style:normal;color:#7fb4e6}
-.cell.fps b{font-size:12px;color:#9be7a0}
 #pause{position:fixed;right:calc(env(safe-area-inset-right) + 16px);top:calc(env(safe-area-inset-top) + 8px);
  width:34px;height:34px;border-radius:9px;border:1px solid rgba(120,190,255,.3);
  background:rgba(8,14,26,.6);color:#cfe6ff;font-size:13px;z-index:6}
@@ -87,14 +78,7 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
 </head>
 <body>
 <canvas id="view"></canvas>
-<div id="hud">
-  <div class="cell"><span>ALT</span><b id="alt">0</b><i>m</i></div>
-  <div class="cell"><span>AGL</span><b id="agl">0</b><i>m</i></div>
-  <div class="cell"><span>SPD</span><b id="spd">0</b><i>km/h</i></div>
-  <div class="cell"><span>HDG</span><b id="hdg">0</b><i>°</i><i id="card">N</i></div>
-  <div class="cell fps"><span>FPS</span><b id="fps">0</b></div>
 </div>
-<div id="labels"></div>
 <button id="jump">LANDMARKS</button>
 <div id="jumpPanel" class="overlay hidden">
   <div class="brand small">LANDMARKS</div>
@@ -125,6 +109,6 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
 </div>
 <div id="rotate">Turn your iPhone to landscape</div>
 <div id="error" class="overlay hidden"><p id="errorMsg"></p></div>
-<script type="module" src="./app.js?v=hud9"></script>
+<script type="module" src="./app.js?v=hud10"></script>
 </body>
 </html>
