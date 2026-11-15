@@ -804,12 +804,13 @@ function updateCamera(dt) {
   const h = flight.heading;
   camFwd.set(Math.sin(h), 0, -Math.cos(h));
   const down = hoverCam;
+  if (aircraft) aircraft.visible = down < 0.6;
   camDesired.copy(flight.pos).addScaledVector(camFwd, -(30 * (1 - down * 0.55)));
   camDesired.y += 7.2 + down * 8;
   const k = state === 'flying' ? (1 - Math.exp(-dt * 4.5)) : 1;
   camera.position.lerp(camDesired, k);
   camLook.copy(flight.pos).addScaledVector(camFwd, 46 * (1 - down));
-  camLook.y += 2 - down * 8;
+  camLook.y += 2 - down * 12;
   camera.lookAt(camLook);
   sky.position.copy(camera.position);
 }
