@@ -5,7 +5,6 @@ import * as THREE from './vendor/three.module.min.js';
    Everything loads in the browser: no server, no API key. */
 
 const UI = {
-  compassRose: document.getElementById('compassRose'),
   start: document.getElementById('start'),
   status: document.getElementById('status'),
   bar: document.getElementById('bar').firstElementChild,
@@ -255,8 +254,8 @@ const sky = new THREE.Mesh(new THREE.SphereGeometry(20000, 24, 16), skyMat);
 sky.frustumCulled = false;
 scene.add(sky);
 
-scene.add(new THREE.HemisphereLight(0xbdd7ff, 0x4a4436, 0.9));
-const sun = new THREE.DirectionalLight(0xffe3bb, 1.3);
+scene.add(new THREE.HemisphereLight(0xcfe2ff, 0x5b5646, 1.25));
+const sun = new THREE.DirectionalLight(0xffeedd, 0.95);
 sun.position.set(-2600, 1900, -1200);
 scene.add(sun);
 
@@ -477,7 +476,7 @@ const winUltra = makeWindow(16, 3, 72, 0.55, 4.2, 3, 1024);
 
 /* ---------- landmarks: labels, mini-map, quick jump ---------- */
 const poiList = [];
-let poiLoaded = false, labTick = 0;
+let poiLoaded = false, labTick = 0, hdgTick = 0;
 const labelsHost = document.getElementById('labels');
 const labelEls = [];
 for (let i = 0; i < 3; i++) {
@@ -771,11 +770,8 @@ function updateFlight(dt) {
   const gh = terrainHeightAt(flight.pos.x, flight.pos.z);
   if (flight.pos.y < gh + MIN_CLEAR) {
     flight.pos.y = gh + MIN_CLEAR;
-    if (flight.pitch < 0.06) flight.pitch = 0.06;
-    flight.speed *= 0.992;
-    flight.shake = 0.55;
+    flight.speed *= 0.996;
   }
-  flight.shake = Math.max(0, flight.shake - dt * 1.6);
 
   aircraft.position.copy(flight.pos);
   aircraft.rotation.set(flight.pitch, -flight.heading, flight.roll, 'YXZ');
@@ -792,10 +788,6 @@ function updateCamera(dt) {
   camDesired.y += 7.2;
   const k = state === 'flying' ? (1 - Math.exp(-dt * 4.5)) : 1;
   camera.position.lerp(camDesired, k);
-  if (flight.shake > 0.01) {
-    camera.position.x += (Math.random() - 0.5) * flight.shake * 2.4;
-    camera.position.y += (Math.random() - 0.5) * flight.shake * 2.4;
-  }
   camLook.copy(flight.pos).addScaledVector(camFwd, 46);
   camLook.y += 2;
   camera.lookAt(camLook);
@@ -803,6 +795,41 @@ function updateCamera(dt) {
 }
 
 /* ---------- interface ---------- */
+const hdgCv = document.getElementById('hdg');
+const hdgCtx = hdgCv ? hdgCv.getContext('2d') : null;
+const CARD = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+function drawHeading(deg) {
+  if (!hdgCtx) return;
+  const W = hdgCv.width, H = hdgCv.height, c = W / 2;
+  const g = hdgCtx;
+  g.clearRect(0, 0, W, H);
+  const pxPerDeg = 2.3;
+  for (let d = Math.floor(deg - 48); d <= deg + 48; d += 5) {
+    const x = c + (d - deg) * pxPerDeg;
+    if (x < 4 || x > W - 4) continue;
+    const dd = ((d % 360) + 360) % 360;
+    const major = dd % 45 === 0;
+    g.strokeStyle = major ? 'rgba(255,207,122,.9)' : 'rgba(150,190,235,.5)';
+    g.lineWidth = major ? 1.8 : 1;
+    g.beginPath();
+    g.moveTo(x, H - (major ? 12 : 6));
+    g.lineTo(x, H - 2);
+    g.stroke();
+    if (major) {
+      g.fillStyle = dd === 0 ? '#ffcf7a' : 'rgba(226,238,255,.92)';
+      g.font = 'bold 10px Arial';
+      g.textAlign = 'center';
+      g.fillText(CARD[(dd / 45) % 8], x, 13);
+    }
+  }
+  g.strokeStyle = '#ffcf7a';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(c, H - 15);
+  g.lineTo(c, H - 4);
+  g.stroke();
+}
+
 /* ---------- boucle ---------- */
 let last = 0, frames = 0, fpsTime = 0, fpsValue = 0, slow = 0;
 function frame(ts) {
@@ -825,6 +852,13 @@ function frame(ts) {
       winUltra && winUpdate(winUltra, CX + flight.pos.x, CY - flight.pos.z);
     }
     labTick += dt;
+    hdgTick += dt;
+    if (hdgTick > 0.08) {
+      hdgTick = 0;
+      let d = flight.heading * 180 / Math.PI;
+      d = (d % 360 + 360) % 360;
+      drawHeading(d);
+    }
     if (labTick > 0.12) {
       labTick = 0;
       updateLabels();
