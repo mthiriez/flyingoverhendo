@@ -393,7 +393,7 @@ function exportUrl(z, col, row, size) {
   const lonL = col / n * 360 - 180, lonR = (col + 1) / n * 360 - 180;
   const latT = Math.atan(Math.sinh(Math.PI * (1 - 2 * row / n))) * 180 / Math.PI;
   const latB = Math.atan(Math.sinh(Math.PI * (1 - 2 * (row + 1) / n))) * 180 / Math.PI;
-  return IMAGERY + '/export?bbox=' + [lonL, latB, lonR, latT].join(',') +
+  return IMAGERY.replace(/\/tile$/, '') + '/export?bbox=' + [lonL, latB, lonR, latT].join(',') +
     '&bboxSR=4326&imageSR=4326&size=' + size + ',' + size + '&format=jpg&f=image';
 }
 
@@ -444,15 +444,21 @@ async function winUpdate(w, wx, wy) {
   w.colC = colC; w.rowC = rowC;
   const half = (w.n - 1) / 2;
   const jobs = [];
+  let loaded = 0;
   for (let j = 0; j < w.n; j++) {
     for (let i = 0; i < w.n; i++) {
       const ix = i, iy = j;
       jobs.push(winTile(w, colC - half + i, rowC - half + j).then(img => {
-        if (img) w.bctx.drawImage(img, ix * w.cell, iy * w.cell, w.cell, w.cell);
+        if (img) { loaded++; w.bctx.drawImage(img, ix * w.cell, iy * w.cell, w.cell, w.cell); }
       }));
     }
   }
   await Promise.all(jobs);
+  if (loaded === 0 && !w.mesh.visible) {
+    // nothing came back: keep the window hidden rather than show an empty square
+    w.busy = false;
+    return;
+  }
   w.ctx.drawImage(w.buf, 0, 0);
   w.tex.needsUpdate = true;
   w.mesh.visible = true;
