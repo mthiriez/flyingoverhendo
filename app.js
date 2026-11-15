@@ -143,9 +143,6 @@ async function buildTerrainTexture() {
   }
   await Promise.all(jobs);
   if (failed > total * 0.4) throw new Error('Too many aerial tiles unavailable (' + failed + '/' + total + ')');
-  const buf = document.createElement('canvas');
-  buf.width = buf.height = px;
-  const bctx = buf.getContext('2d');
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
