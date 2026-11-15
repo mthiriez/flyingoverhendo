@@ -16,15 +16,14 @@ const UI = {
   pauseOverlay: document.getElementById('pauseOverlay'),
   resume: document.getElementById('resume'),
   pause: document.getElementById('pause'),
-  boost: document.getElementById('boost'),
   place: document.getElementById('place'),
   placeCity: document.getElementById('placeCity'),
   placeStreet: document.getElementById('placeStreet'),
   throttle: document.getElementById('throttle'),
+  thrTrack: document.getElementById('thrTrack'),
   thrFill: document.getElementById('thrFill'),
   thrKnob: document.getElementById('thrKnob'),
   thrVal: document.getElementById('thrVal'),
-  knob: document.getElementById('knob'),
   rotate: document.getElementById('rotate'),
   error: document.getElementById('error'),
   errorMsg: document.getElementById('errorMsg')
@@ -462,7 +461,7 @@ const flight = {
 const MAX_ALT = 3200, MIN_CLEAR = 9;
 const AREA_RADIUS = 80467;          // 50 miles around Flat Rock
 
-let stickX = 0, stickY = 0, boosting = false;
+let stickX = 0, stickY = 0;
 let state = 'loading';
 const keys = Object.create(null);
 
@@ -494,7 +493,7 @@ function initAudio() {
 function audioUpdate() {
   if (!AC) return;
   const t = AC.currentTime;
-  const f = 62 + flight.speed * 1.25 + (boosting ? 22 : 0);
+  const f = 62 + flight.speed * 1.25;
   try {
     eng.frequency.setTargetAtTime(f, t, 0.15);
     engGain.gain.setTargetAtTime(state === 'flying' ? 0.055 : 0.0, t, 0.2);
@@ -505,20 +504,12 @@ function audioUpdate() {
 /* ---------- input ---------- */
 let pointerId = null, originX = 0, originY = 0;
 
-function setKnob(dx, dy) {
-  const max = 34;
-  const kx = Math.max(-max, Math.min(max, dx * 40));
-  const ky = Math.max(-max, Math.min(max, dy * 40));
-  UI.knob.style.transform = 'translate(' + kx + 'px,' + ky + 'px)';
-}
-
 canvas.addEventListener('pointerdown', (e) => {
   if (state !== 'flying') return;
   e.preventDefault();
   initAudio();
   pointerId = e.pointerId;
   originX = e.clientX; originY = e.clientY;
-  setKnob(0, 0);
 }, { passive: false });
 
 canvas.addEventListener('pointermove', (e) => {
@@ -528,37 +519,28 @@ canvas.addEventListener('pointermove', (e) => {
   const dy = (e.clientY - originY) / 90;
   stickX = Math.max(-1, Math.min(1, dx));
   stickY = Math.max(-1, Math.min(1, dy));
-  setKnob(dx, dy);
 }, { passive: false });
 
 function endPointer(e) {
   if (pointerId !== null && e && e.pointerId !== undefined && e.pointerId !== pointerId) return;
-  pointerId = null; stickX = 0; stickY = 0; setKnob(0, 0);
+  pointerId = null; stickX = 0; stickY = 0;
 }
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('pointerleave', endPointer);
-
-function boostOn(e) { e.preventDefault(); e.stopPropagation(); boosting = true; UI.boost.classList.add('on'); initAudio(); }
-function boostOff(e) { if (e) e.preventDefault(); boosting = false; UI.boost.classList.remove('on'); }
-UI.boost.addEventListener('pointerdown', boostOn, { passive: false });
-UI.boost.addEventListener('pointerup', boostOff);
-UI.boost.addEventListener('pointercancel', boostOff);
-UI.boost.addEventListener('pointerleave', boostOff);
 
 /* ---------- commande de vitesse ---------- */
 const SPD_MIN = 150, SPD_MAX = 380;
 let targetKmh = 252;
 function drawThrottle() {
   const p = (targetKmh - SPD_MIN) / (SPD_MAX - SPD_MIN);
-  UI.thrFill.style.width = (p * 100).toFixed(1) + '%';
-  UI.thrKnob.style.left = (p * 100).toFixed(1) + '%';
+  UI.thrFill.style.height = (p * 100).toFixed(1) + '%';
+  UI.thrKnob.style.bottom = (p * 100).toFixed(1) + '%';
   UI.thrVal.textContent = Math.round(targetKmh);
 }
-function setThrottleFromX(clientX) {
-  const r = UI.throttle.getBoundingClientRect();
-  const pad = 14;
-  const p = Math.max(0, Math.min(1, (clientX - r.left - pad) / Math.max(1, r.width - pad * 2)));
+function setThrottleFromY(clientY) {
+  const r = UI.thrTrack.getBoundingClientRect();
+  const p = 1 - Math.max(0, Math.min(1, (clientY - r.top) / Math.max(1, r.height)));
   targetKmh = SPD_MIN + p * (SPD_MAX - SPD_MIN);
   drawThrottle();
 }
@@ -567,13 +549,13 @@ UI.throttle.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   thrPointer = e.pointerId;
   try { UI.throttle.setPointerCapture(e.pointerId); } catch (err) {}
-  setThrottleFromX(e.clientX);
+  setThrottleFromY(e.clientY);
   initAudio();
 }, { passive: false });
 UI.throttle.addEventListener('pointermove', (e) => {
   if (thrPointer !== e.pointerId) return;
   e.preventDefault();
-  setThrottleFromX(e.clientX);
+  setThrottleFromY(e.clientY);
 }, { passive: false });
 UI.throttle.addEventListener('pointerup', () => { thrPointer = null; });
 UI.throttle.addEventListener('pointercancel', () => { thrPointer = null; });
@@ -581,14 +563,12 @@ drawThrottle();
 
 window.addEventListener('keydown', (e) => {
   keys[e.key.toLowerCase()] = true;
-  if (e.key === 'Shift') boosting = true;
   if (e.key === '+' || e.key === '=') { targetKmh = Math.min(SPD_MAX, targetKmh + 15); drawThrottle(); }
   if (e.key === '-') { targetKmh = Math.max(SPD_MIN, targetKmh - 15); drawThrottle(); }
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(e.key) >= 0) e.preventDefault();
 });
 window.addEventListener('keyup', (e) => {
   keys[e.key.toLowerCase()] = false;
-  if (e.key === 'Shift') boosting = false;
 });
 
 /* ---------- place readout: city and neighbourhood under the plane ---------- */
@@ -637,8 +617,8 @@ function updateFlight(dt) {
   const ix = Math.max(-1, Math.min(1, stickX + kx));
   const iy = Math.max(-1, Math.min(1, stickY + ky));
 
-  const targetSpeed = (boosting ? Math.max(targetKmh + 80, 360) : targetKmh) / 3.6;
-  flight.speed += (targetSpeed - flight.speed) * Math.min(1, dt * (boosting ? 1.8 : 0.9));
+  const targetSpeed = targetKmh / 3.6;
+  flight.speed += (targetSpeed - flight.speed) * Math.min(1, dt * 0.9);
 
   flight.heading += ix * 0.62 * dt;
   const pitchTarget = iy * 0.5;
@@ -775,8 +755,6 @@ UI.go.addEventListener('click', startFlight);UI.start.addEventListener('click', 
 UI.pause.addEventListener('click', () => {
   if (state !== 'flying') return;
   state = 'paused';
-  boosting = false;
-  UI.boost.classList.remove('on');
   UI.pauseOverlay.classList.remove('hidden');
 });
 UI.resume.addEventListener('click', () => {
@@ -789,8 +767,6 @@ UI.resume.addEventListener('click', () => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && state === 'flying') {
     state = 'paused';
-    boosting = false;
-    UI.boost.classList.remove('on');
     UI.pauseOverlay.classList.remove('hidden');
   }
   last = 0;
