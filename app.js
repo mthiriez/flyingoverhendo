@@ -414,6 +414,7 @@ function winPosition(w) {
     }
   }
   attr.needsUpdate = true;
+  w.geo.computeVertexNormals();
   w.geo.computeBoundingSphere();
 }
 
