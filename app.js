@@ -800,6 +800,10 @@ const camFwd = new THREE.Vector3();
 const camDesired = new THREE.Vector3();
 const camLook = new THREE.Vector3();
 
+function groundAt(x, z) {
+  return sampleElevation((x + CX) / R * 180 / Math.PI, latOfMercY(CY - z));
+}
+
 function updateCamera(dt) {
   const h = flight.heading;
   camFwd.set(Math.sin(h), 0, -Math.cos(h));
@@ -807,10 +811,16 @@ function updateCamera(dt) {
   if (aircraft) aircraft.visible = down < 0.6;
   camDesired.copy(flight.pos).addScaledVector(camFwd, -(30 * (1 - down * 0.55)));
   camDesired.y += 7.2 + down * 8;
+  const camFloor = groundAt(camDesired.x, camDesired.z) + 3.0;
+  if (camDesired.y < camFloor) camDesired.y = camFloor;
   const k = state === 'flying' ? (1 - Math.exp(-dt * 4.5)) : 1;
   camera.position.lerp(camDesired, k);
+  const camKeep = groundAt(camera.position.x, camera.position.z) + 2.0;
+  if (camera.position.y < camKeep) camera.position.y = camKeep;
   camLook.copy(flight.pos).addScaledVector(camFwd, 46 * (1 - down));
   camLook.y += 2 - down * 12;
+  const lookFloor = groundAt(camLook.x, camLook.z) + 1.5;
+  if (camLook.y < lookFloor) camLook.y = lookFloor;
   camera.lookAt(camLook);
   sky.position.copy(camera.position);
 }
