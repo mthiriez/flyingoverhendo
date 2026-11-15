@@ -140,7 +140,7 @@ async function buildTerrainTexture() {
   if (failed > total * 0.4) throw new Error('Too many aerial tiles unavailable (' + failed + '/' + total + ')');
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   tex.magFilter = THREE.LinearFilter;
   tex.generateMipmaps = true;
@@ -331,8 +331,9 @@ function makeFadeTexture(inner) {
   return new THREE.CanvasTexture(cv);
 }
 
-function makeWindow(z, n, seg, inner, yOff, order) {
-  const px = n * 256;
+function makeWindow(z, n, seg, inner, yOff, order, cell) {
+  const cellPx = cell || 256;
+  const px = n * cellPx;
   const span = n * (WORLD / Math.pow(2, z));
   const cv = document.createElement('canvas');
   cv.width = cv.height = px;
@@ -344,7 +345,7 @@ function makeWindow(z, n, seg, inner, yOff, order) {
   const bctx = buf.getContext('2d');
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   tex.magFilter = THREE.LinearFilter;
 
@@ -382,16 +383,25 @@ function makeWindow(z, n, seg, inner, yOff, order) {
   mesh.renderOrder = order;
   mesh.visible = false;
   scene.add(mesh);
-  return { z: z, n: n, seg: seg, span: span, cv: cv, ctx: ctx, buf: buf, bctx: bctx, tex: tex,
+  return { z: z, n: n, seg: seg, span: span, cv: cv, ctx: ctx, buf: buf, bctx: bctx, tex: tex, cell: cellPx,
            geo: geo, mesh: mesh, yOff: yOff, colC: null, rowC: null, prevCol: null, prevRow: null,
            busy: false, pending: false, cache: new Map() };
+}
+
+function exportUrl(z, col, row, size) {
+  const n = Math.pow(2, z);
+  const lonL = col / n * 360 - 180, lonR = (col + 1) / n * 360 - 180;
+  const latT = Math.atan(Math.sinh(Math.PI * (1 - 2 * row / n))) * 180 / Math.PI;
+  const latB = Math.atan(Math.sinh(Math.PI * (1 - 2 * (row + 1) / n))) * 180 / Math.PI;
+  return IMAGERY + '/export?bbox=' + [lonL, latB, lonR, latT].join(',') +
+    '&bboxSR=4326&imageSR=4326&size=' + size + ',' + size + '&format=jpg&f=image';
 }
 
 function winTile(w, col, row) {
   const key = col + '/' + row;
   let job = w.cache.get(key);
   if (!job) {
-    job = loadImage(orthoUrl(w.z, col, row)).catch(() => null);
+    job = loadImage(w.cell > 256 ? exportUrl(w.z, col, row, w.cell) : orthoUrl(w.z, col, row)).catch(() => null);
     w.cache.set(key, job);
     if (w.cache.size > 240) w.cache.delete(w.cache.keys().next().value);
   }
@@ -428,7 +438,7 @@ async function winUpdate(w, wx, wy) {
   // carry the previous window over, shifted by the tile delta, so nothing flashes dark
   w.bctx.clearRect(0, 0, w.buf.width, w.buf.height);
   if (w.prevCol !== null) {
-    w.bctx.drawImage(w.cv, (w.prevCol - colC) * 256, (w.prevRow - rowC) * 256);
+    w.bctx.drawImage(w.cv, (w.prevCol - colC) * cellPx, (w.prevRow - rowC) * cellPx);
   }
   w.prevCol = colC; w.prevRow = rowC;
   w.colC = colC; w.rowC = rowC;
@@ -438,7 +448,7 @@ async function winUpdate(w, wx, wy) {
     for (let i = 0; i < w.n; i++) {
       const ix = i, iy = j;
       jobs.push(winTile(w, colC - half + i, rowC - half + j).then(img => {
-        if (img) w.bctx.drawImage(img, ix * 256, iy * 256, 256, 256);
+        if (img) w.bctx.drawImage(img, ix * cellPx, iy * cellPx, cellPx, cellPx);
       }));
     }
   }
@@ -457,6 +467,7 @@ async function winUpdate(w, wx, wy) {
 let detailTick = 0;
 const winMid = makeWindow(13, 7, 56, 0.60, 2.2, 1);
 const winNear = makeWindow(16, 5, 64, 0.54, 4.0, 2);
+const winUltra = makeWindow(16, 3, 72, 0.55, 4.2, 3, 1024);
 
 /* ---------- landmarks: labels, mini-map, quick jump ---------- */
 const poiList = [];
@@ -634,7 +645,7 @@ canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('pointerleave', endPointer);
 
 /* ---------- commande de vitesse ---------- */
-const SPD_MIN = 150, SPD_MAX = 380;
+const SPD_MIN = 0, SPD_MAX = 380;
 let targetKmh = 252;
 function drawThrottle() {
   const p = (targetKmh - SPD_MIN) / (SPD_MAX - SPD_MIN);
@@ -724,14 +735,22 @@ function updateFlight(dt) {
   const targetSpeed = targetKmh / 3.6;
   flight.speed += (targetSpeed - flight.speed) * Math.min(1, dt * 0.9);
 
-  flight.heading += ix * 0.62 * dt;
+  // hovering: throttle at zero and the aircraft stopped. The stick now turns
+  // the aircraft in place and moves it up or down instead of banking it.
+  const hovering = targetKmh < 6 && flight.speed < 3.5;
+  flight.heading += ix * (hovering ? 0.95 : 0.62) * dt;
   const pitchTarget = iy * 0.5;
   flight.pitch += (pitchTarget - flight.pitch) * Math.min(1, dt * 3.0);
-  flight.roll += ((-ix * 0.55) - flight.roll) * Math.min(1, dt * 4.0);
+  flight.roll += ((-ix * (hovering ? 0.14 : 0.55)) - flight.roll) * Math.min(1, dt * 4.0);
 
-  const climb = Math.sin(flight.pitch) * flight.speed;
-  const sink = Math.max(0, 38 - flight.speed) * 0.6;
-  flight.pos.y += (climb - sink) * dt;
+  if (hovering) {
+    flight.pitch += (0 - flight.pitch) * Math.min(1, dt * 3.0);
+    flight.pos.y += iy * 14 * dt;
+  } else {
+    const climb = Math.sin(flight.pitch) * flight.speed;
+    const sink = Math.max(0, 38 - flight.speed) * 0.6;
+    flight.pos.y += (climb - sink) * dt;
+  }
   if (flight.pos.y > MAX_ALT) flight.pos.y = MAX_ALT;
 
   flight.pos.x += Math.sin(flight.heading) * flight.speed * dt;
@@ -797,6 +816,7 @@ function frame(ts) {
       detailTick = 0;
       winUpdate(winMid, CX + flight.pos.x, CY - flight.pos.z);
       winUpdate(winNear, CX + flight.pos.x, CY - flight.pos.z);
+      winUltra && winUpdate(winUltra, CX + flight.pos.x, CY - flight.pos.z);
     }
     labTick += dt;
     if (labTick > 0.12) {
