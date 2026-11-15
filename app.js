@@ -8,6 +8,8 @@ const UI = {
   alt: document.getElementById('alt'),
   spd: document.getElementById('spd'),
   hdg: document.getElementById('hdg'),
+  card: document.getElementById('card'),
+  compassRose: document.getElementById('compassRose'),
   fps: document.getElementById('fps'),
   start: document.getElementById('start'),
   status: document.getElementById('status'),
@@ -696,6 +698,9 @@ function updateHud(dt) {
   let deg = flight.heading * 180 / Math.PI;
   deg = (deg % 360 + 360) % 360;
   UI.hdg.textContent = Math.round(deg) % 360;
+  UI.card.textContent = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(deg / 45) % 8];
+  // the rose turns so that its N always points to true north on screen
+  UI.compassRose.style.transform = 'rotate(' + (-deg).toFixed(1) + 'deg)';
 }
 
 /* ---------- boucle ---------- */
