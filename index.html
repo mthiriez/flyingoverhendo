@@ -52,6 +52,23 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
 #throttle{position:fixed;right:calc(env(safe-area-inset-right) + 10px);top:50%;transform:translateY(-50%);
  width:62px;height:min(246px,60vh);border-radius:16px;background:rgba(8,14,26,.5);
  border:1px solid rgba(120,190,255,.22);backdrop-filter:blur(6px);z-index:5}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+.poi{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;font-size:10px;font-weight:700;
+ letter-spacing:.3px;color:#eaf2ff;padding:2px 7px;border-radius:8px;background:rgba(8,14,26,.55);
+ border:1px solid rgba(120,190,255,.25);text-shadow:0 1px 2px rgba(0,0,0,.6);backdrop-filter:blur(4px)}
+.poi.k-peak{color:#9be7a0;border-color:rgba(155,231,160,.4)}
+.poi.k-town,.poi.k-city{color:#cfe8ff;border-color:rgba(191,228,255,.45)}
+.poi.k-lake{color:#8fc6ff;border-color:rgba(143,198,255,.4)}
+.poi.k-falls,.poi.k-site{color:#ffd39b;border-color:rgba(255,211,155,.45)}
+#map{position:fixed;left:calc(env(safe-area-inset-left) + 12px);bottom:calc(env(safe-area-inset-bottom) + 12px);
+ width:96px;height:96px;z-index:3;pointer-events:none}
+#jump{position:fixed;right:calc(env(safe-area-inset-right) + 14px);bottom:calc(env(safe-area-inset-bottom) + 16px);
+ padding:10px 16px;border-radius:22px;border:1px solid rgba(120,190,255,.35);background:rgba(8,14,26,.6);
+ color:#cfe6ff;font-size:10px;letter-spacing:2px;font-weight:800;z-index:6;backdrop-filter:blur(6px)}
+#jumpList{max-height:56vh;overflow-y:auto;width:min(420px,88vw);display:flex;flex-direction:column;gap:6px;
+ padding:4px;-webkit-overflow-scrolling:touch}
+#jumpList button{padding:11px 14px;border-radius:12px;border:1px solid rgba(120,190,255,.22);
+ background:rgba(12,22,38,.85);color:#eaf2ff;font-size:12px;text-align:left;font-weight:600}
 #compass{position:fixed;left:calc(env(safe-area-inset-left) + 12px);top:calc(env(safe-area-inset-top) + 8px);
  width:74px;height:74px;border-radius:50%;background:rgba(8,14,26,.5);border:1px solid rgba(120,190,255,.22);
  backdrop-filter:blur(6px);z-index:3;pointer-events:none}
@@ -78,9 +95,18 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
 <canvas id="view"></canvas>
 <div id="hud">
   <div class="cell"><span>ALT</span><b id="alt">0</b><i>m</i></div>
+  <div class="cell"><span>AGL</span><b id="agl">0</b><i>m</i></div>
   <div class="cell"><span>SPD</span><b id="spd">0</b><i>km/h</i></div>
   <div class="cell"><span>HDG</span><b id="hdg">0</b><i>°</i><i id="card">N</i></div>
   <div class="cell fps"><span>FPS</span><b id="fps">0</b></div>
+</div>
+<div id="labels"></div>
+<canvas id="map" width="96" height="96"></canvas>
+<button id="jump">LANDMARKS</button>
+<div id="jumpPanel" class="overlay hidden">
+  <div class="brand small">LANDMARKS</div>
+  <div id="jumpList"></div>
+  <button id="jumpClose">CLOSE</button>
 </div>
 <div id="compass">
   <div id="compassMark"></div>
@@ -107,6 +133,6 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
 </div>
 <div id="rotate">Turn your iPhone to landscape</div>
 <div id="error" class="overlay hidden"><p id="errorMsg"></p></div>
-<script type="module" src="./app.js?v=8b594090"></script>
+<script type="module" src="./app.js?v=713e5eaa"></script>
 </body>
 </html>
