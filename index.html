@@ -53,15 +53,14 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
  width:62px;height:min(246px,60vh);border-radius:16px;background:rgba(8,14,26,.5);
  border:1px solid rgba(120,190,255,.22);backdrop-filter:blur(6px);z-index:5}
 #labels{position:fixed;inset:0;pointer-events:none;z-index:2;overflow:hidden}
-.poi{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;font-size:10px;font-weight:700;
- letter-spacing:.3px;color:#eaf2ff;padding:2px 7px;border-radius:8px;background:rgba(8,14,26,.55);
+.poi{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;font-size:9px;font-weight:700;
+ letter-spacing:.3px;color:#eaf2ff;padding:1px 5px;border-radius:8px;background:rgba(8,14,26,.34);
  border:1px solid rgba(120,190,255,.25);text-shadow:0 1px 2px rgba(0,0,0,.6);backdrop-filter:blur(4px)}
 .poi.k-peak{color:#9be7a0;border-color:rgba(155,231,160,.4)}
 .poi.k-town,.poi.k-city{color:#cfe8ff;border-color:rgba(191,228,255,.45)}
 .poi.k-lake{color:#8fc6ff;border-color:rgba(143,198,255,.4)}
 .poi.k-falls,.poi.k-site{color:#ffd39b;border-color:rgba(255,211,155,.45)}
-#map{position:fixed;left:calc(env(safe-area-inset-left) + 12px);bottom:calc(env(safe-area-inset-bottom) + 12px);
- width:96px;height:96px;z-index:3;pointer-events:none}
+
 #jump{position:fixed;right:calc(env(safe-area-inset-right) + 14px);bottom:calc(env(safe-area-inset-bottom) + 16px);
  padding:10px 16px;border-radius:22px;border:1px solid rgba(120,190,255,.35);background:rgba(8,14,26,.6);
  color:#cfe6ff;font-size:10px;letter-spacing:2px;font-weight:800;z-index:6;backdrop-filter:blur(6px)}
@@ -70,16 +69,11 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
 #jumpList button{padding:11px 14px;border-radius:12px;border:1px solid rgba(120,190,255,.22);
  background:rgba(12,22,38,.85);color:#eaf2ff;font-size:12px;text-align:left;font-weight:600}
 #compass{position:fixed;left:calc(env(safe-area-inset-left) + 12px);top:calc(env(safe-area-inset-top) + 8px);
- width:74px;height:74px;border-radius:50%;background:rgba(8,14,26,.5);border:1px solid rgba(120,190,255,.22);
+ width:46px;height:46px;border-radius:50%;background:rgba(8,14,26,.42);border:1px solid rgba(120,190,255,.18);
  backdrop-filter:blur(6px);z-index:3;pointer-events:none}
 #compassRose{position:absolute;inset:0;will-change:transform}
-#compassRose b{position:absolute;font-size:11px;font-weight:800;line-height:1;color:#cfe6ff}
-#compassRose b.cn{top:7px;left:50%;margin-left:-5px;color:#ffcf7a}
-#compassRose b.cs{bottom:7px;left:50%;margin-left:-4px}
-#compassRose b.ce{right:8px;top:50%;margin-top:-6px}
-#compassRose b.cw{left:8px;top:50%;margin-top:-6px}
-#compassMark{position:absolute;left:50%;top:0;width:0;height:0;margin-left:-5px;
- border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #ffd39b;z-index:2}
+#compassRose b{position:absolute;font-size:10px;font-weight:800;line-height:1;color:#ffcf7a}
+#compassRose b.cn{top:5px;left:50%;margin-left:-4px}
 #thrCap{position:absolute;top:9px;left:0;right:0;text-align:center;font-size:8px;letter-spacing:1.6px;color:#7fb4e6}
 #thrTrack{position:absolute;left:50%;top:28px;bottom:46px;width:6px;margin-left:-3px;border-radius:4px;background:rgba(255,255,255,.14)}
 #thrFill{position:absolute;left:0;right:0;bottom:0;border-radius:4px;background:linear-gradient(0deg,#5aa9ff,#ffd39b);height:43%}
@@ -101,7 +95,6 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
   <div class="cell fps"><span>FPS</span><b id="fps">0</b></div>
 </div>
 <div id="labels"></div>
-<canvas id="map" width="96" height="96"></canvas>
 <button id="jump">LANDMARKS</button>
 <div id="jumpPanel" class="overlay hidden">
   <div class="brand small">LANDMARKS</div>
@@ -109,8 +102,7 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
   <button id="jumpClose">CLOSE</button>
 </div>
 <div id="compass">
-  <div id="compassMark"></div>
-  <div id="compassRose"><b class="cn">N</b><b class="ce">E</b><b class="cs">S</b><b class="cw">W</b></div>
+  <div id="compassRose"><b class="cn">N</b></div>
 </div>
 <div id="place" class="hidden"><b id="placeCity">—</b><span id="placeStreet"></span></div>
 <div id="throttle">
@@ -133,6 +125,6 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
 </div>
 <div id="rotate">Turn your iPhone to landscape</div>
 <div id="error" class="overlay hidden"><p id="errorMsg"></p></div>
-<script type="module" src="./app.js?v=713e5eaa"></script>
+<script type="module" src="./app.js?v=hud9"></script>
 </body>
 </html>
