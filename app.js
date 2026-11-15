@@ -576,11 +576,11 @@ document.getElementById('jumpClose').addEventListener('click', () => {
 
 /* ---------- flight state ---------- */
 const flight = {
-  pos: new THREE.Vector3(0, 420, 3200),
+  pos: new THREE.Vector3(0, 240, 3200),
   heading: 0, pitch: 0, roll: 0, speed: 66,
   shake: 0
 };
-const MAX_ALT = 3200, MIN_CLEAR = 25;
+const MAX_ALT = 3200, MIN_CLEAR = 7;
 const AREA_RADIUS = 80467;          // 50 miles around Flat Rock
 
 let stickX = 0, stickY = 0;
@@ -646,7 +646,7 @@ canvas.addEventListener('pointermove', (e) => {
     if (activePointers.size >= 2 && isHovering) {
       // two fingers in a hover: climb or descend
       flight.pos.y = Math.max(terrainHeightAt(flight.pos.x, flight.pos.z) + MIN_CLEAR,
-                              Math.min(MAX_ALT, flight.pos.y - dy2 * 0.7));
+                              Math.min(MAX_ALT, flight.pos.y - dy2 * 1.5));
       stickX = 0; stickY = 0;
       return;
     }
