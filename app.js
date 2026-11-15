@@ -141,6 +141,9 @@ async function buildTerrainTexture() {
   }
   await Promise.all(jobs);
   if (failed > total * 0.4) throw new Error('Too many aerial tiles unavailable (' + failed + '/' + total + ')');
+  const buf = document.createElement('canvas');
+  buf.width = buf.height = px;
+  const bctx = buf.getContext('2d');
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -342,6 +345,9 @@ function makeWindow(z, n, seg, inner, yOff, order) {
   const ctx = cv.getContext('2d');
   ctx.fillStyle = '#3a4038';
   ctx.fillRect(0, 0, px, px);
+  const buf = document.createElement('canvas');
+  buf.width = buf.height = px;
+  const bctx = buf.getContext('2d');
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -382,8 +388,9 @@ function makeWindow(z, n, seg, inner, yOff, order) {
   mesh.renderOrder = order;
   mesh.visible = false;
   scene.add(mesh);
-  return { z: z, n: n, seg: seg, span: span, cv: cv, ctx: ctx, tex: tex, geo: geo, mesh: mesh,
-           yOff: yOff, colC: null, rowC: null, busy: false, pending: false, cache: new Map() };
+  return { z: z, n: n, seg: seg, span: span, cv: cv, ctx: ctx, buf: buf, bctx: bctx, tex: tex,
+           geo: geo, mesh: mesh, yOff: yOff, colC: null, rowC: null, prevCol: null, prevRow: null,
+           busy: false, pending: false, cache: new Map() };
 }
 
 function winTile(w, col, row) {
@@ -424,6 +431,12 @@ async function winUpdate(w, wx, wy) {
   if (colC === w.colC && rowC === w.rowC) return;
   if (w.busy) { w.pending = true; return; }
   w.busy = true;
+  // carry the previous window over, shifted by the tile delta, so nothing flashes dark
+  w.bctx.clearRect(0, 0, w.buf.width, w.buf.height);
+  if (w.prevCol !== null) {
+    w.bctx.drawImage(w.cv, (w.prevCol - colC) * 256, (w.prevRow - rowC) * 256);
+  }
+  w.prevCol = colC; w.prevRow = rowC;
   w.colC = colC; w.rowC = rowC;
   const half = (w.n - 1) / 2;
   const jobs = [];
@@ -431,13 +444,12 @@ async function winUpdate(w, wx, wy) {
     for (let i = 0; i < w.n; i++) {
       const ix = i, iy = j;
       jobs.push(winTile(w, colC - half + i, rowC - half + j).then(img => {
-        w.ctx.fillStyle = '#3a4038';
-        w.ctx.fillRect(ix * 256, iy * 256, 256, 256);
-        if (img) w.ctx.drawImage(img, ix * 256, iy * 256, 256, 256);
+        if (img) w.bctx.drawImage(img, ix * 256, iy * 256, 256, 256);
       }));
     }
   }
   await Promise.all(jobs);
+  w.ctx.drawImage(w.buf, 0, 0);
   w.tex.needsUpdate = true;
   w.mesh.visible = true;
   winPosition(w);
@@ -449,8 +461,8 @@ async function winUpdate(w, wx, wy) {
 }
 
 let detailTick = 0;
-const winMid = makeWindow(13, 7, 40, 0.60, 1.2, 1);
-const winNear = makeWindow(16, 5, 40, 0.54, 2.8, 2);
+const winMid = makeWindow(13, 7, 56, 0.60, 2.2, 1);
+const winNear = makeWindow(16, 5, 64, 0.54, 4.0, 2);
 
 /* ---------- flight state ---------- */
 const flight = {
@@ -458,7 +470,7 @@ const flight = {
   heading: 0, pitch: 0, roll: 0, speed: 66,
   shake: 0
 };
-const MAX_ALT = 3200, MIN_CLEAR = 9;
+const MAX_ALT = 3200, MIN_CLEAR = 25;
 const AREA_RADIUS = 80467;          // 50 miles around Flat Rock
 
 let stickX = 0, stickY = 0;
