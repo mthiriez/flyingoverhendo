@@ -5,13 +5,7 @@ import * as THREE from './vendor/three.module.min.js';
    Everything loads in the browser: no server, no API key. */
 
 const UI = {
-  alt: document.getElementById('alt'),
-  agl: document.getElementById('agl'),
-  spd: document.getElementById('spd'),
-  hdg: document.getElementById('hdg'),
-  card: document.getElementById('card'),
   compassRose: document.getElementById('compassRose'),
-  fps: document.getElementById('fps'),
   start: document.getElementById('start'),
   status: document.getElementById('status'),
   bar: document.getElementById('bar').firstElementChild,
@@ -784,22 +778,6 @@ function updateCamera(dt) {
 }
 
 /* ---------- interface ---------- */
-let hudTick = 0;
-function updateHud(dt) {
-  hudTick += dt;
-  if (hudTick < 0.1) return;
-  hudTick = 0;
-  UI.alt.textContent = Math.round(flight.pos.y);
-  UI.spd.textContent = Math.round(flight.speed * 3.6);
-  UI.agl.textContent = Math.max(0, Math.round(flight.pos.y - terrainHeightAt(flight.pos.x, flight.pos.z)));
-  let deg = flight.heading * 180 / Math.PI;
-  deg = (deg % 360 + 360) % 360;
-  UI.hdg.textContent = Math.round(deg) % 360;
-  UI.card.textContent = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(deg / 45) % 8];
-  // the rose turns so that its N always points to true north on screen
-  UI.compassRose.style.transform = 'rotate(' + (-deg).toFixed(1) + 'deg)';
-}
-
 /* ---------- boucle ---------- */
 let last = 0, frames = 0, fpsTime = 0, fpsValue = 0, slow = 0;
 function frame(ts) {
@@ -812,8 +790,7 @@ function frame(ts) {
 
   if (state === 'flying') {
     updateFlight(dt);
-    updateHud(dt);
-    scheduleGeo(dt);
+      scheduleGeo(dt);
     audioUpdate();
     detailTick += dt;
     if (detailTick > 0.45) {
@@ -833,7 +810,6 @@ function frame(ts) {
   frames++; fpsTime += dt;
   if (fpsTime >= 0.5) {
     fpsValue = Math.round(frames / fpsTime);
-    UI.fps.textContent = fpsValue;
     frames = 0; fpsTime = 0;
     if (state === 'flying') {
       if (fpsValue < 28) { slow++; } else { slow = Math.max(0, slow - 1); }
