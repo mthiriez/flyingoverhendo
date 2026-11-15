@@ -52,6 +52,17 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
 #throttle{position:fixed;right:calc(env(safe-area-inset-right) + 10px);top:50%;transform:translateY(-50%);
  width:62px;height:min(246px,60vh);border-radius:16px;background:rgba(8,14,26,.5);
  border:1px solid rgba(120,190,255,.22);backdrop-filter:blur(6px);z-index:5}
+#compass{position:fixed;left:calc(env(safe-area-inset-left) + 12px);top:calc(env(safe-area-inset-top) + 8px);
+ width:74px;height:74px;border-radius:50%;background:rgba(8,14,26,.5);border:1px solid rgba(120,190,255,.22);
+ backdrop-filter:blur(6px);z-index:3;pointer-events:none}
+#compassRose{position:absolute;inset:0;will-change:transform}
+#compassRose b{position:absolute;font-size:11px;font-weight:800;line-height:1;color:#cfe6ff}
+#compassRose b.cn{top:7px;left:50%;margin-left:-5px;color:#ffcf7a}
+#compassRose b.cs{bottom:7px;left:50%;margin-left:-4px}
+#compassRose b.ce{right:8px;top:50%;margin-top:-6px}
+#compassRose b.cw{left:8px;top:50%;margin-top:-6px}
+#compassMark{position:absolute;left:50%;top:0;width:0;height:0;margin-left:-5px;
+ border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #ffd39b;z-index:2}
 #thrCap{position:absolute;top:9px;left:0;right:0;text-align:center;font-size:8px;letter-spacing:1.6px;color:#7fb4e6}
 #thrTrack{position:absolute;left:50%;top:28px;bottom:46px;width:6px;margin-left:-3px;border-radius:4px;background:rgba(255,255,255,.14)}
 #thrFill{position:absolute;left:0;right:0;bottom:0;border-radius:4px;background:linear-gradient(0deg,#5aa9ff,#ffd39b);height:43%}
@@ -68,8 +79,12 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
 <div id="hud">
   <div class="cell"><span>ALT</span><b id="alt">0</b><i>m</i></div>
   <div class="cell"><span>SPD</span><b id="spd">0</b><i>km/h</i></div>
-  <div class="cell"><span>HDG</span><b id="hdg">0</b><i>°</i></div>
+  <div class="cell"><span>HDG</span><b id="hdg">0</b><i>°</i><i id="card">N</i></div>
   <div class="cell fps"><span>FPS</span><b id="fps">0</b></div>
+</div>
+<div id="compass">
+  <div id="compassMark"></div>
+  <div id="compassRose"><b class="cn">N</b><b class="ce">E</b><b class="cs">S</b><b class="cw">W</b></div>
 </div>
 <div id="place" class="hidden"><b id="placeCity">—</b><span id="placeStreet"></span></div>
 <div id="throttle">
@@ -92,6 +107,6 @@ button#go:disabled{opacity:.35;border-color:rgba(160,190,220,.4)}
 </div>
 <div id="rotate">Turn your iPhone to landscape</div>
 <div id="error" class="overlay hidden"><p id="errorMsg"></p></div>
-<script type="module" src="./app.js?v=07e59752"></script>
+<script type="module" src="./app.js?v=29befbaa"></script>
 </body>
 </html>
