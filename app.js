@@ -241,7 +241,7 @@ renderer.setPixelRatio(DPR);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0xb9cbdd, 0.000022);
+scene.fog = new THREE.FogExp2(0xb9cbdd, 0.000012);
 const camera = new THREE.PerspectiveCamera(62, 1, 3, 130000);
 
 const skyMat = new THREE.ShaderMaterial({
@@ -473,8 +473,39 @@ let detailTick = 0;
 let isHovering = false;
 let hoverCam = 0;
 const winMid = makeWindow(13, 7, 56, 0.60, 2.2, 1);
-const winNear = makeWindow(16, 5, 64, 0.54, 4.0, 2);
-const winUltra = makeWindow(16, 3, 72, 0.55, 4.2, 3, 1024);
+const winNear = makeWindow(16, 5, 64, 0.54, 6.5, 2);
+const winUltra = makeWindow(16, 3, 72, 0.55, 7.2, 3, 1024);
+
+/* ---------- permanent high-resolution patch: 5 miles around Lake Summit ---------- */
+const LAKE_SUMMIT = { lat: 35.2269, lon: -82.4140 };   // Tuxedo reservoir, landmark entry
+const lakePatch = [
+  makeWindow(14, 9, 88, 0.84, 3.2, 1.2),   // ~22 km across, 9.5 m/px
+  makeWindow(15, 7, 80, 0.80, 4.4, 1.4)    // ~8.5 km across, 4.8 m/px
+];
+
+async function fillStatic(w, lat, lon) {
+  const span = WORLD / Math.pow(2, w.z);
+  w.colC = Math.floor((mercXOf(lon) + WORLD / 2) / span);
+  w.rowC = Math.floor((WORLD / 2 - mercYOf(lat)) / span);
+  const half = (w.n - 1) / 2;
+  const jobs = [];
+  let loaded = 0;
+  w.bctx.clearRect(0, 0, w.buf.width, w.buf.height);
+  for (let j = 0; j < w.n; j++) {
+    for (let i = 0; i < w.n; i++) {
+      jobs.push(winTile(w, w.colC - half + i, w.rowC - half + j).then(img => {
+        if (img) { loaded++; w.bctx.drawImage(img, i * w.cell, j * w.cell, w.cell, w.cell); }
+      }));
+    }
+  }
+  await Promise.all(jobs);
+  if (!loaded) return false;
+  w.ctx.drawImage(w.buf, 0, 0);
+  w.tex.needsUpdate = true;
+  w.mesh.visible = true;
+  winPosition(w);
+  return true;
+}
 
 /* ---------- landmarks: labels, mini-map, quick jump ---------- */
 const poiList = [];
@@ -988,6 +1019,7 @@ async function boot() {
     UI.status.textContent = 'Ready · 50 miles around Flat Rock, North Carolina';
     UI.go.disabled = false;
     state = 'ready';
+    lakePatch.forEach(w => fillStatic(w, LAKE_SUMMIT.lat, LAKE_SUMMIT.lon).catch(() => false));
   } catch (err) {
     console.error(err);
     UI.status.textContent = 'Loading failed';
