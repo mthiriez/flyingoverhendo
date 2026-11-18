@@ -319,51 +319,87 @@ scene.add(sun);
 /* ---------- avion (design original) ---------- */
 function buildAircraft() {
   const g = new THREE.Group();
-  const white = new THREE.MeshStandardMaterial({ color: 0xf3f6f9, roughness: 0.42, metalness: 0.12 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x232c3a, roughness: 0.55 });
-  const accent = new THREE.MeshStandardMaterial({ color: 0xff8a3d, roughness: 0.4, emissive: 0x3a1400 });
+  const red = new THREE.MeshStandardMaterial({ color: 0xb0142b, roughness: 0.36, metalness: 0.2 });
+  const cream = new THREE.MeshStandardMaterial({ color: 0xf1ebe0, roughness: 0.46, metalness: 0.08 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x1b2230, roughness: 0.5 });
+  const glass = new THREE.MeshStandardMaterial({ color: 0x2b3b4e, roughness: 0.1, metalness: 0.55 });
 
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.92, 6.4, 6, 12), white);
+  // fuselage: short, slim, single seat
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.58, 5.2, 6, 12), red);
   body.rotation.x = Math.PI / 2;
   g.add(body);
 
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.92, 2.1, 12), white);
-  nose.rotation.x = -Math.PI / 2;
-  nose.position.z = -4.75;
-  g.add(nose);
+  // cream nose cowling, spinner and two-blade prop
+  const cowl = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.54, 1.05, 14), cream);
+  cowl.rotation.x = Math.PI / 2;
+  cowl.position.z = -3.5;
+  g.add(cowl);
 
-  const wing = new THREE.Mesh(new THREE.BoxGeometry(11.2, 0.3, 2.15), white);
-  wing.position.set(0, -0.1, 0.35);
+  const spinner = new THREE.Mesh(new THREE.ConeGeometry(0.33, 0.72, 12), cream);
+  spinner.rotation.x = -Math.PI / 2;
+  spinner.position.z = -4.42;
+  g.add(spinner);
+
+  const prop = new THREE.Group();
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.09, 2.0, 0.05), dark);
+  prop.add(blade);
+  const blade2 = blade.clone();
+  blade2.rotation.z = Math.PI / 2;
+  prop.add(blade2);
+  prop.position.z = -4.18;
+  g.add(prop);
+
+  // low wing: cream panels, red leading edge and tips
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.16, 1.5), cream);
+  wing.position.set(0, -0.46, -0.3);
   g.add(wing);
 
-  const wingTipL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.34, 2.15), accent);
-  wingTipL.position.set(-5.5, -0.1, 0.35);
-  g.add(wingTipL);
-  const wingTipR = wingTipL.clone();
-  wingTipR.position.x = 5.5;
-  g.add(wingTipR);
+  const lead = new THREE.Mesh(new THREE.BoxGeometry(8.7, 0.17, 0.24), red);
+  lead.position.set(0, -0.46, -0.98);
+  g.add(lead);
 
-  const stab = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.22, 1.0), white);
-  stab.position.set(0, 0.32, 3.15);
+  for (const sx of [-1, 1]) {
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.18, 1.5), red);
+    tip.position.set(sx * 4.35, -0.46, -0.3);
+    g.add(tip);
+  }
+
+  // tail: cream stabiliser, red fin with cream rudder
+  const stab = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 0.82), cream);
+  stab.position.set(0, 0.16, 2.95);
   g.add(stab);
 
-  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.26, 1.9, 1.35), accent);
-  fin.position.set(0, 1.05, 3.15);
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.25, 0.86), red);
+  fin.position.set(0, 0.78, 2.95);
   g.add(fin);
 
-  const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.78, 12, 10), dark);
-  canopy.scale.set(0.95, 0.8, 1.9);
-  canopy.position.set(0, 0.72, -1.5);
+  const rudder = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.15, 0.22), cream);
+  rudder.position.set(0, 0.78, 3.42);
+  g.add(rudder);
+
+  // bubble canopy
+  const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.62, 14, 10), glass);
+  canopy.scale.set(0.92, 0.78, 1.55);
+  canopy.position.set(0, 0.46, -1.15);
   g.add(canopy);
 
-  const engL = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.9, 10), dark);
-  engL.rotation.x = Math.PI / 2;
-  engL.position.set(-2.7, -0.42, 0.6);
-  g.add(engL);
-  const engR = engL.clone();
-  engR.position.x = 2.7;
-  g.add(engR);
+  // taildragger gear: two legs and a tail wheel
+  for (const sx of [-1, 1]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.85, 8), dark);
+    leg.position.set(sx * 1.05, -0.9, -0.55);
+    leg.rotation.z = sx * 0.22;
+    g.add(leg);
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.16, 12), dark);
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(sx * 1.15, -1.3, -0.55);
+    g.add(wheel);
+  }
+  const tailWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.1, 10), dark);
+  tailWheel.rotation.z = Math.PI / 2;
+  tailWheel.position.set(0, -0.72, 3.35);
+  g.add(tailWheel);
 
+  g.userData.prop = prop;
   return g;
 }
 const aircraft = buildAircraft();
@@ -884,6 +920,7 @@ function updateFlight(dt) {
 
   aircraft.position.copy(flight.pos);
   aircraft.rotation.set(flight.pitch, -flight.heading, flight.roll, 'YXZ');
+  if (aircraft.userData.prop) aircraft.userData.prop.rotation.z += 0.6;
 }
 
 const camFwd = new THREE.Vector3();
