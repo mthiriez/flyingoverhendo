@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.min.js';
 
 /* =====================  FLYING OVER HENDO  ===================== 
-   Real terrain: USGS National Map aerial imagery + Terrarium elevation tiles.
+   Real terrain: NC OneMap 6-inch orthoimagery for detail (USGS base underneath) + Terrarium elevation.
    Everything loads in the browser: no server, no API key. */
 
 const UI = {
@@ -55,7 +55,10 @@ const SPAN_Y = B.yTop - B.yBot;
 
 /* ---------- data loading ---------- */
 const IMAGERY = 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile';
+const ORTHO_HD = 'https://services.nconemap.gov/secure/rest/services/Imagery/Orthoimagery_Latest_cached/ImageServer';
+const MAX_HD_Z = 19;
 const ELEV_SRC = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium';
+const ELEV_SRC_ALT = 'https://elevation-tiles-prod.s3.amazonaws.com/terrarium';
 
 // USGS tile service: z / row / column
 function orthoUrl(z, col, row) {
@@ -64,6 +67,13 @@ function orthoUrl(z, col, row) {
 // Terrarium tiles: z / column / row, elevation encoded in the RGB channels
 function elevUrl(z, col, row) {
   return ELEV_SRC + '/' + z + '/' + col + '/' + row + '.png';
+}
+function elevUrlAlt(z, col, row) {
+  return ELEV_SRC_ALT + '/' + z + '/' + col + '/' + row + '.png';
+}
+// NC OneMap 15 cm cached service, Web Mercator, z / row / column
+function hdTileUrl(z, col, row) {
+  return ORTHO_HD + '/tile/' + Math.min(z, MAX_HD_Z) + '/' + row + '/' + col;
 }
 
 function loadImage(url) {
@@ -76,21 +86,68 @@ function loadImage(url) {
   });
 }
 
+// Outside North Carolina the 6-inch service answers blank: detect it and use USGS instead.
+const blankCanvas = document.createElement('canvas');
+blankCanvas.width = blankCanvas.height = 16;
+const blankCtx = blankCanvas.getContext('2d', { willReadFrequently: true });
+function isBlankTile(img) {
+  try {
+    const g = blankCtx;
+    g.clearRect(0, 0, 16, 16);
+    g.drawImage(img, 0, 0, 16, 16);
+    const d = g.getImageData(0, 0, 16, 16).data;
+    for (let i = 4; i < d.length; i += 4) if (d[i + 3] === 0) return true;
+    let uniform = true;
+    for (let i = 4; i < d.length; i += 4) {
+      if (Math.abs(d[i] - d[0]) > 8 || Math.abs(d[i + 1] - d[1]) > 8 || Math.abs(d[i + 2] - d[2]) > 8) { uniform = false; break; }
+    }
+    return uniform;
+  } catch (e) { return false; }
+}
+
+async function loadHd(url, fallback) {
+  try {
+    const img = await loadImage(url);
+    if (!isBlankTile(img)) return img;
+  } catch (e) {}
+  return fallback ? loadImage(fallback) : Promise.reject(new Error('No imagery'));
+}
+
 const elevTiles = new Map();
 
-async function loadElevTile(col, row) {
-  const key = col + ':' + row;
-  if (elevTiles.has(key)) return elevTiles.get(key);
-  const img = await loadImage(elevUrl(ELEV_Z, col, row));
+function decodeElev(img) {
   const cv = document.createElement('canvas');
   cv.width = 256; cv.height = 256;
   const g = cv.getContext('2d', { willReadFrequently: true });
   g.drawImage(img, 0, 0, 256, 256);
   const d = g.getImageData(0, 0, 256, 256).data;
   const f = new Float32Array(256 * 256);
+  let lo = 1e9, hi = -1e9;
   for (let i = 0, k = 0; i < f.length; i++, k += 4) {
     // metres = (R * 256 + G + B / 256) - 32768
-    f[i] = (d[k] * 256 + d[k + 1] + d[k + 2] / 256) - 32768;
+    const v = (d[k] * 256 + d[k + 1] + d[k + 2] / 256) - 32768;
+    f[i] = v; if (v < lo) lo = v; if (v > hi) hi = v;
+  }
+  if (hi - lo < 0.5) throw new Error('placeholder elevation tile');
+  return f;
+}
+
+async function loadElevTile(col, row, depth) {
+  const key = col + ':' + row;
+  if (elevTiles.has(key)) return elevTiles.get(key);
+  let f = null;
+  const urls = [elevUrl(ELEV_Z, col, row), elevUrlAlt(ELEV_Z, col, row)];
+  for (let i = 0; i < urls.length && !f; i++) {
+    try { f = decodeElev(await loadImage(urls[i])); } catch (e) {}
+  }
+  if (!f) {
+    if ((depth || 0) >= 2) throw new Error('Elevation unavailable');
+    const parent = decodeElev(await loadImage(elevUrl(ELEV_Z - 1 - (depth || 0), col >> 1, row >> 1)));
+    f = new Float32Array(256 * 256);
+    const ox = (col & 1) * 128, oy = (row & 1) * 128;
+    for (let y = 0; y < 256; y++)
+      for (let x = 0; x < 256; x++)
+        f[y * 256 + x] = parent[(oy + (y >> 1)) * 256 + ox + (x >> 1)];
   }
   elevTiles.set(key, f);
   return f;
@@ -400,7 +457,9 @@ function winTile(w, col, row) {
   const key = col + '/' + row;
   let job = w.cache.get(key);
   if (!job) {
-    job = loadImage(w.cell > 256 ? exportUrl(w.z, col, row, w.cell) : orthoUrl(w.z, col, row)).catch(() => null);
+    job = (w.cell > 256
+      ? loadImage(exportUrl(w.z, col, row, w.cell)).catch(() => null)
+      : loadHd(hdTileUrl(w.z, col, row), orthoUrl(w.z, col, row))).catch(() => null);
     w.cache.set(key, job);
     if (w.cache.size > 240) w.cache.delete(w.cache.keys().next().value);
   }
@@ -473,8 +532,8 @@ let detailTick = 0;
 let isHovering = false;
 let hoverCam = 0;
 const winMid = makeWindow(13, 7, 56, 0.60, 2.2, 1);
-const winNear = makeWindow(16, 5, 64, 0.54, 6.5, 2);
-const winUltra = makeWindow(16, 3, 72, 0.55, 7.2, 3, 1024);
+const winNear = makeWindow(17, 5, 64, 0.54, 6.5, 2);
+const winUltra = makeWindow(18, 5, 72, 0.55, 7.2, 3);
 
 /* ---------- permanent high-resolution patch: 5 miles around Lake Summit ---------- */
 const LAKE_SUMMIT = { lat: 35.2269, lon: -82.4140 };   // Tuxedo reservoir, landmark entry
